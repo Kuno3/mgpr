@@ -1,0 +1,6 @@
+# 開発環境で必要なパッケージ
+pandas
+matplotlib
+flake8
+black
+mypy
