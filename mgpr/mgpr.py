@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import multivariate_normal
-from .minimax_tilting_sampler import TruncatedMVN
+from botorch.utils.probability.lin_ess import LinearEllipticalSliceSampler
+import torch
 
 
 # ガウスカーネルの関数を定義
@@ -103,7 +104,7 @@ class mgpr:
         print("gamma2:", self.gamma2)
         print("loglikelihood of best parmeters", -result.fun)
 
-    def sampling(self, s, num_samples):
+    def sampling(self, s, num_samples, burn_in=100, thinning=10):
         m = len(s)
 
         K_tt = np.zeros((self.n, self.n))
@@ -151,16 +152,18 @@ class mgpr:
         scaling = np.diag(1 / np.sqrt(np.diag(var_f_prime)))
         mean_f_prime = scaling @ mean_f_prime
         var_f_prime = scaling @ var_f_prime @ scaling
-        f_prime_samples = (
-            TruncatedMVN(
-                mean_f_prime.copy(),
-                var_f_prime.copy(),
-                np.zeros(self.c),
-                np.inf * np.ones(self.c),
-            )
-            .sample(num_samples)
-            .T
-        )
+        f_prime_samples = -(
+            LinearEllipticalSliceSampler(
+                inequality_constraints=(
+                    torch.eye(self.c, dtype=torch.float64),
+                    torch.zeros(self.c, 1, dtype=torch.float64),
+                ),
+                mean=torch.from_numpy(-mean_f_prime.reshape(-1, 1)),
+                covariance_matrix=torch.from_numpy(var_f_prime),
+                burnin=burn_in,
+                thinning=thinning,
+            ).draw(num_samples)
+        ).numpy()
 
         cov = (d_K_sx - K_st @ np.linalg.solve(Sigma_y, d_K_tx)) @ scaling
         var_post = (

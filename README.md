@@ -22,6 +22,7 @@ model = gpr(
 )
 # パラメータの最適化（初期値は最初に与えたパラメータ）
 model.parameter_optimize()
+# サンプリング
 # sは確率密度関数に興味のある点の入力でnum_samplesは欲しいサンプルの数
 samples = model.sampling(s, num_samples)
 ```
@@ -46,5 +47,6 @@ model = mgpr(
 model.parameter_optimize()
 # サンプリング
 # sは確率密度関数に興味のある点の入力でnum_samplesは欲しいサンプルの数
-samples = model.sampling(s, num_samples)
+# burn_inとthinningはサンプリングを収束させ自己相関を小さくするために捨てるサンプルの数
+samples = model.sampling(s, num_samples, burn_in, thinning)
 ```
